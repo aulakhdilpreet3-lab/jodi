@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  birthdate    DateTime
+  city         String   @default("")
+  chips        String   @default("")
+  familyCloseness String @default("")
+  faith        String   @default("")
+  languages    String   @default("")
+  kids         String   @default("")
+  verified     Boolean  @default(false)
+  voiceUrl     String?
+  voiceDurationSec Float?
+  createdAt    DateTime @default(now())
+
+  prompts      Prompt[]
+  photos       Photo[]
+
+  swipesSent     Swipe[] @relation("SwipesSent")
+  swipesReceived Swipe[] @relation("SwipesReceived")
+
+  matchesAsA   Match[] @relation("MatchUserA")
+  matchesAsB   Match[] @relation("MatchUserB")
+
+  messages       Message[]
+  reportsFiled   Report[] @relation("ReportsFiled")
+  reportsAgainst Report[] @relation("ReportsAgainst")
+  blocksMade     Block[]  @relation("BlocksMade")
+  blocksReceived Block[]  @relation("BlocksReceived")
+}
+
+model Prompt {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question String
+  answer   String
+  order    Int    @default(0)
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// SQLite has no native enum support, so the action is validated in
+// application code (routes/deck.ts) and stored as one of "LIKE" | "PASS" | "ROSE".
+model Swipe {
+  id         String      @id @default(cuid())
+  fromUserId String
+  from       User        @relation("SwipesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId   String
+  to         User        @relation("SwipesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+  action     String
+  createdAt  DateTime    @default(now())
+
+  @@unique([fromUserId, toUserId])
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  userAId   String
+  userA     User     @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId   String
+  userB     User     @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  messages  Message[]
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  matchId   String
+  match     Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  reporterId String
+  reporter   User     @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetId   String
+  target     User     @relation("ReportsAgainst", fields: [targetId], references: [id], onDelete: Cascade)
+  reason     String
+  createdAt  DateTime @default(now())
+}
+
+model Block {
+  id         String   @id @default(cuid())
+  blockerId  String
+  blocker    User     @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId  String
+  blocked    User     @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}

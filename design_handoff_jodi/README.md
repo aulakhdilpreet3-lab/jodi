@@ -1,15 +1,40 @@
 # jodi
 
-A React + TypeScript build of the **jodi** design handoff — a South Asian dating app prototype: a curated five-a-day swipe deck, prompt-based profiles with compatibility scoring, a crushes grid, chat, the match moment, and a profile screen.
+A full-stack build of the **jodi** design handoff — a South Asian dating app: a curated five-a-day swipe deck, prompt-based profiles with real compatibility scoring, a crushes ("who's into you") grid, realtime chat, the match moment, and an editable profile.
 
-This is a faithful rebuild of the interactive prototype in `Jodi.dc.html` as real, buildable source (Vite + React + TypeScript), not a redesign. Photos are still placeholder gradients — nothing here talks to a backend; all data is local mock state (see `src/data.ts`).
+This is a real, working multi-user product — accounts, a database, a matching engine, and live chat between independent browser sessions — not a single-player mock. It started as a faithful rebuild of the interactive prototype in `../Jodi.dc.html`; it now has a real Express + Prisma backend behind it. See **"What's still missing"** below for what separates this from something you'd actually submit to an App Store.
+
+## Architecture
+
+```
+design_handoff_jodi/
+  client/   Vite + React + TypeScript — the phone-frame UI
+  server/   Express + Prisma (SQLite) + Socket.IO — auth, matching, chat, uploads
+```
+
+- **Auth**: email + password, JWT, 18+ birthdate gate enforced server-side.
+- **Matching**: "five for today" is computed server-side — real candidates, excluding anyone already swiped on or blocked, ranked by a real compatibility score (shared languages, faith, "what you want," interests) then seeded-shuffled so the five are stable through the day and rotate tomorrow.
+- **Swipes & matches**: like/pass/rose are persisted; a mutual like/rose creates a real `Match` row. Both sides get notified instantly over a socket — whoever completes the match sees it from their swipe response, the other person gets a `match` push event — matching how real dating apps notify both sides, not just the one who happened to complete it.
+- **Chat**: persisted `Message` rows, delivered live over Socket.IO to whoever has that match's room open, with a live typing indicator. Opening a thread marks the other person's messages read.
+- **Profile editing**: name/city/prompts/preferences/photos/voice intro are all real, editable, and persisted. "Profile strength" is computed from what's actually filled in.
+- **Voice intros**: recorded in-browser (MediaRecorder), uploaded, and played back for real — not a static waveform graphic.
+- **Report & block**: both persisted; blocking hides the match/conversation from *both* sides and is enforced server-side (you can't message a match that's been blocked, not just hidden client-side).
 
 ## Run it
 
+First time:
+
 ```sh
-npm install
-npm run dev
+npm install                # installs the root orchestrator (concurrently)
+npm run install:all        # installs client + server dependencies
+cp server/.env.example server/.env   # then edit server/.env if you want a real JWT secret
+npm run db:setup           # creates the SQLite db and seeds 10 demo profiles
+npm run dev                # runs both client (5173) and server (4000) together
 ```
+
+Open http://localhost:5173. Sign up for real, or log in as any seeded demo account (`aisha@demo.jodi` … `sana@demo.jodi`, password `password123`) to see a populated deck immediately.
+
+To try matching/chat between two accounts, open two browser profiles (or one normal + one incognito window) so they get separate localStorage/sessions, and sign up or log in as two different users in each.
 
 ## Build
 
@@ -17,11 +42,28 @@ npm run dev
 npm run build
 ```
 
+Builds both workspaces. `server`'s build also lets it serve `client/dist` directly (`npm start` in `server/` after building) if you want a single process serving both API and UI.
+
 ## Structure
 
-- `src/data.ts` — mock profiles, prompts, compatibility data, chat threads
-- `src/useJodiApp.ts` — all app state and interaction logic (deck drag/fling physics, matching, chat, nav)
-- `src/components/` — one component per screen (Discover, Crushes, Chats, Chat thread, Me) plus the bottom nav, profile detail overlay, and match modal
-- `src/App.tsx` — composes the phone-frame shell around the screens
+- `server/prisma/schema.prisma` — the data model: User, Prompt, Photo, Swipe, Match, Message, Report, Block
+- `server/src/routes/` — auth, profile (incl. photo/voice upload), deck (matching + swipe), likes, matches, messages, safety (report/block)
+- `server/src/lib/compatibility.ts` — the actual scoring function behind "X% match"
+- `server/src/index.ts` — Express app + Socket.IO wiring (presence, chat rooms, match notifications)
+- `client/src/useJodiApp.ts` — all client state and API/socket wiring (deck drag/fling physics stay client-side; everything else talks to the server)
+- `client/src/components/` — one component per screen, plus the bottom nav, profile detail overlay, and match modal
+- `client/src/AuthContext.tsx` — session/token management
 
-See `../Launch Guide.dc.html` for what's still needed to turn this into a shippable app (backend, auth, real matching engine, trust & safety, App Store requirements).
+## What's still missing
+
+Deliberately out of scope for an engineering build — these need real business/legal/vendor decisions, not code:
+
+- **Native mobile app / App Store submission** — this is a web app. Shipping to iOS needs a Mac, Xcode, an Apple Developer account, and (per Apple's dating-app review history) a working demo account with real content.
+- **Paid ID/photo verification** (Veriff/Persona/Onfido) — the `verified` badge is just a database flag today; there's no real liveness or ID check behind it.
+- **Payments** — the "Jodi Gold" upsell is inert by design (it tells you payments aren't wired up rather than faking a purchase). Real IAP requires an Apple/Google developer account and billing integration.
+- **Phone number / Apple / Google sign-in** — email + password only. No SMS provider is configured.
+- **Push notifications** — realtime updates work in-app via Socket.IO while the tab is open; there's no mobile/web push for when it's closed.
+- **Moderation** — reports are recorded (`Report` table) but there's no admin queue or staff tooling to act on them.
+- **Legal** — no Terms of Service, Privacy Policy, or business entity. Needed before real users, not before a demo.
+
+See `../Launch Guide.dc.html` for the fuller picture of what launching for real involves.
