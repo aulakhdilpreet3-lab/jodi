@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="./doc-page.js"></script>
+<style>
+  doc-page:not(:defined){visibility:hidden}
+  h1,h2,h3{font-family:'Bricolage Grotesque',sans-serif;color:#201812;letter-spacing:-.5px}
+  h1{font-size:34px;font-weight:800;letter-spacing:-1.4px;line-height:1.05;margin:0 0 6px}
+  h2{font-size:19px;font-weight:800;margin:30px 0 10px;padding-bottom:6px;border-bottom:2px solid #201812}
+  h3{font-size:14.5px;font-weight:700;margin:18px 0 6px}
+  p,li{font-family:'Hanken Grotesk',sans-serif;font-size:14px;line-height:1.62;color:#2b241c}
+  ul,ol{margin:8px 0 8px 0;padding-left:20px}
+  li{margin-bottom:5px}
+  strong{color:#201812;font-weight:700}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-family:'Hanken Grotesk',sans-serif}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#8A7C68;border-bottom:2px solid #201812;padding:6px 8px 5px}
+  td{font-size:13px;color:#2b241c;border-bottom:1px solid rgba(32,24,18,.14);padding:7px 8px;vertical-align:top;line-height:1.45}
+  .lede{font-size:15.5px;line-height:1.6;color:#4a4038}
+  .callout{border:2px solid #201812;border-radius:14px;padding:13px 16px;margin:14px 0;background:#FBF3E4;break-inside:avoid;orphans:3;widows:3}
+  .callout p{margin:0;font-size:13.5px}
+  .warn{border:2px solid #E5326E;border-radius:14px;padding:13px 16px;margin:14px 0;background:#fdeef3;break-inside:avoid}
+  .warn p{margin:0;font-size:13.5px}
+  .tag{display:inline-block;font-family:'Hanken Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:3px 9px;border-radius:12px;border:1.5px solid #201812;background:#F5A524;color:#201812}
+  .meta{font-family:'Hanken Grotesk',sans-serif;font-size:11.5px;color:#8A7C68;letter-spacing:.4px}
+  .rule{height:3px;background:#201812;margin:14px 0 22px}
+  .phase{font-family:'Hanken Grotesk',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#E5326E;margin-top:20px}
+</style>
+</helmet>
+
+<doc-page margin="0.8in">
+
+  <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">
+    <div style="display:flex;align-items:center"><span style="width:17px;height:17px;border-radius:50%;background:#E5326E"></span><span style="width:17px;height:17px;border-radius:50%;background:#F5A524;margin-left:-7px;mix-blend-mode:multiply"></span></div>
+    <span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#201812;letter-spacing:-.7px">jodi</span>
+  </div>
+
+  <h1>Getting Jodi onto the App Store</h1>
+  <p class="lede">A practical build-and-launch plan for a South Asian dating app — what exists today, what has to be built, what Apple will demand, and roughly what it costs.</p>
+  <div class="rule"></div>
+
+  <h2>1. Where you actually are</h2>
+  <p>You have a <strong>complete, interactive product design</strong>: the curated five-a-day deck, prompt-based profiles, compatibility scoring, voice intros, the crushes grid, chat, the match moment, and a verified profile screen. That is genuinely valuable — it is the artefact you hand a developer, an investor, or a designer, and it removes months of ambiguity.</p>
+  <p>What you do <strong>not</strong> have is a working app. There is no database, no accounts, no real messaging, no photo storage, no matching engine, and no iOS binary. Everything in the prototype is simulated in the browser.</p>
+
+  <div class="callout">
+    <p><strong>The honest framing:</strong> the design is roughly 10–15% of the work of shipping a dating app. The other 85% is backend engineering, trust &amp; safety, and solving the cold-start problem — getting enough real people in one city that the app doesn't feel empty.</p>
+  </div>
+
+  <h2>2. Choose how it gets built</h2>
+  <table>
+    <thead><tr><th>Path</th><th>Time to launch</th><th>Ballpark cost</th><th>Best when</th></tr></thead>
+    <tbody>
+      <tr><td><strong>No-code</strong><br/>FlutterFlow, Adalo, Bubble + wrapper</td><td>2–4 months</td><td>$3k–15k</td><td>You want to test demand fast and accept rough edges and scaling limits.</td></tr>
+      <tr><td><strong>Hire a contract team</strong><br/>React Native or Flutter</td><td>4–8 months</td><td>$60k–200k</td><td>You have funding and want a real, maintainable product.</td></tr>
+      <tr><td><strong>Technical co-founder</strong></td><td>6–12 months</td><td>Equity</td><td>You're building a company, not a project. Best long-term odds.</td></tr>
+      <tr><td><strong>Learn and build it yourself</strong></td><td>12+ months</td><td>Time</td><td>You want the skill and aren't in a hurry.</td></tr>
+    </tbody>
+  </table>
+  <p>For a first version, the pragmatic stack is <strong>React Native</strong> (one codebase, iOS + Android) with <strong>Supabase or Firebase</strong> for auth, database, storage and realtime chat. Both give you most of a dating-app backend out of the box.</p>
+
+  <h2>3. What has to be built</h2>
+  <h3>Core</h3>
+  <ul>
+    <li>Phone-number or Apple/Google sign-in, with an <strong>18+ date-of-birth gate</strong></li>
+    <li>Profile creation: photo upload with compression, prompts, voice-intro recording</li>
+    <li>Matching engine — the daily-five curation logic and the compatibility score</li>
+    <li>Like / pass / rose actions with a daily quota</li>
+    <li>Realtime chat with push notifications</li>
+    <li>Payments for Jodi Gold (see the Apple rules below — this one has a trap in it)</li>
+  </ul>
+  <h3>Trust &amp; safety — not optional, and Apple checks it</h3>
+  <ul>
+    <li><strong>Photo verification</strong>: a selfie-pose check matched against profile photos. Buy this — Veriff, Persona, or Onfido — do not build it.</li>
+    <li><strong>Report and block</strong> on every profile and every conversation</li>
+    <li>A moderation queue and a real human who reads it</li>
+    <li>Automated screening of photos and messages for nudity and abuse</li>
+    <li>A published way for users to contact you, and a commitment to act on reports within 24 hours</li>
+  </ul>
+
+  <div class="warn">
+    <p><strong>The UNiDAYS idea:</strong> student verification is a nice trust signal and a good growth wedge, but it is a partnership you have to apply for, and it cannot substitute for real ID or photo verification. Treat it as a badge, not as your safety system.</p>
+  </div>
+
+  <h2>4. Legal groundwork</h2>
+  <p>Do this before you write the app, not after. A lawyer for a few hours is far cheaper than a rewrite.</p>
+  <ul>
+    <li><strong>Form a company</strong> (an LLC is typical in the US) so liability doesn't sit on you personally</li>
+    <li><strong>Terms of Service</strong> and a <strong>Privacy Policy</strong>, both publicly hosted — Apple requires working links</li>
+    <li><strong>GDPR / CCPA</strong> compliance if you have users in Europe or California: data export, data deletion, consent</li>
+    <li><strong>In-app account deletion</strong> — Apple mandates this for any app with account creation</li>
+    <li>Age-verification and safety language written into your terms</li>
+    <li>Trademark search on the name <strong>Jodi</strong> before you spend anything on branding</li>
+  </ul>
+
+  <h2>5. The App Store, specifically</h2>
+  <h3>Set-up</h3>
+  <ul>
+    <li>Join the <strong>Apple Developer Program</strong> — $99/year. As a company you'll need a D-U-N-S number, which takes 1–2 weeks, so start it early.</li>
+    <li>You need a <strong>Mac</strong> and Xcode to build and upload.</li>
+    <li>Create the app record in <strong>App Store Connect</strong>, then ship builds to testers through <strong>TestFlight</strong>.</li>
+  </ul>
+
+  <h3>The guidelines that reject dating apps</h3>
+  <table>
+    <thead><tr><th>Rule</th><th>What it means for you</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1.2 — User-generated content</strong></td><td>You must have content filtering, a report mechanism, the ability to block users, and a published contact method. Apple rejects dating apps for this constantly. Have it working before you submit.</td></tr>
+      <tr><td><strong>3.1.1 — In-app purchase</strong></td><td>Jodi Gold <strong>must</strong> use Apple's in-app purchase. You cannot link out to Stripe. Apple takes 15–30%. Price accordingly.</td></tr>
+      <tr><td><strong>5.1.1 — Data &amp; privacy</strong></td><td>Accurate privacy nutrition labels, a real privacy policy, no collecting data you don't need, and in-app account deletion.</td></tr>
+      <tr><td><strong>1.1.4 — Objectionable content</strong></td><td>No hookup-forward or sexualised marketing imagery. Keep screenshots and copy clean.</td></tr>
+      <tr><td><strong>4.3 — Spam</strong></td><td>Being "another dating app" is a real rejection risk. Your South Asian focus and the five-a-day model are your differentiation — say so plainly in the review notes.</td></tr>
+      <tr><td><strong>2.1 — App completeness</strong></td><td>Give reviewers a working demo account with matches and conversations already populated. An empty app gets rejected.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Listing assets you'll need</h3>
+  <ul>
+    <li>App icon at 1024×1024, plus screenshots for 6.7" and 6.5" iPhones</li>
+    <li>Name (30 characters), subtitle (30), description, and keywords (100)</li>
+    <li>An <strong>17+ or 18+ age rating</strong>, set honestly</li>
+    <li>Support URL and marketing URL</li>
+  </ul>
+  <p>Budget <strong>1–3 days</strong> for the first review, and expect at least one rejection. It is normal. Fix and resubmit.</p>
+
+  <h2>6. The hard part: cold start</h2>
+  <p>A dating app with a hundred users in the wrong city is worthless. This kills far more dating apps than bad code does.</p>
+  <ul>
+    <li><strong>Launch in exactly one city.</strong> For a South Asian app: Jersey City / Edison, Toronto (Brampton or Mississauga), the Bay Area, or London. Pick one.</li>
+    <li><strong>Aim for roughly 500–1,000 real, active users in that city before you go public.</strong> Below that, the daily five will be padded with people who aren't a fit — and your entire premise collapses.</li>
+    <li>Seed through South Asian student associations, garba and Eid events, temple and mosque youth groups, and desi creators on Instagram and TikTok.</li>
+    <li><strong>Recruit women first.</strong> Every dating app skews male; the women-initiate rule helps, but only if the women are there.</li>
+    <li>Run a waitlist by city and open each one only when it's dense enough.</li>
+  </ul>
+
+  <h2>7. A realistic sequence</h2>
+  <p class="phase">Months 0–1 — validate</p>
+  <ul><li>Show this prototype to 30–50 people in your target group. Watch them use it. Get a waitlist going. Trademark search and company formation.</li></ul>
+  <p class="phase">Months 1–2 — get a builder</p>
+  <ul><li>Choose your path from section 2. Lock the feature list for v1 — resist adding to it. Get the legal documents drafted.</li></ul>
+  <p class="phase">Months 2–6 — build</p>
+  <ul><li>Backend, apps, verification and moderation. Apple Developer account and D-U-N-S in parallel. TestFlight with 50–100 real users from the waitlist.</li></ul>
+  <p class="phase">Month 6 — submit</p>
+  <ul><li>Listing assets, privacy labels, demo account, review notes explaining your differentiation. Submit; expect a rejection; resubmit.</li></ul>
+  <p class="phase">Months 6–9 — one city</p>
+  <ul><li>Open your single city. Events and creator partnerships. Watch match rate, reply rate, and day-7 retention. Only expand when the first city holds.</li></ul>
+
+  <div class="callout">
+    <p><strong>Ongoing costs to plan for:</strong> Apple $99/yr · backend $25–300/mo early on · photo verification roughly $0.50–2.00 per user · push notifications and SMS a few hundred a month at small scale · plus a real person's time on moderation from day one.</p>
+  </div>
+
+  <h2>8. What I can do next</h2>
+  <ul>
+    <li><strong>Design the missing flows</strong> — onboarding, profile creation, photo and ID verification, the paywall, and reporting. A developer will need all of them, and they don't exist yet.</li>
+    <li><strong>Produce a developer handoff package</strong> — the design plus specifications an engineer can quote and build from.</li>
+    <li><strong>Build the App Store listing assets</strong> — screenshots, icon, and the description copy.</li>
+    <li><strong>Write the spec for the matching algorithm</strong> — how the compatibility score is actually computed from the values questions.</li>
+  </ul>
+  <p class="meta">Prepared for the Jodi prototype · figures are ballpark and vary by market and team.</p>
+
+</doc-page>
+</x-dc>
+</body>
+</html>
