@@ -1,0 +1,37 @@
+# Fly.io deploy config for the jodi API server.
+#
+# Before first deploy:
+#   1. `fly launch --no-deploy` from this directory (server/) to claim a unique
+#      app name — it will offer to overwrite this file; say no and keep this one,
+#      just update the `app` name below to whatever it assigned.
+#   2. `fly volumes create jodi_data --region <same as primary_region below> --size 1`
+#      (1GB is plenty for SQLite + profile photos/voice clips at launch scale)
+#   3. `fly secrets set JWT_SECRET=$(openssl rand -hex 32)`
+#   4. `fly deploy`
+#
+# See ../DEPLOY.md for the full walkthrough.
+
+app = "jodi-server"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "4000"
+  DATABASE_URL = "file:/data/dev.db"
+  UPLOAD_ROOT = "/data/uploads"
+
+[[mounts]]
+  source = "jodi_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -58,12 +58,14 @@ Builds both workspaces. `server`'s build also lets it serve `client/dist` direct
 
 Deliberately out of scope for an engineering build — these need real business/legal/vendor decisions, not code:
 
-- **Native mobile app / App Store submission** — this is a web app. Shipping to iOS needs a Mac, Xcode, an Apple Developer account, and (per Apple's dating-app review history) a working demo account with real content.
+- **Native mobile app** — done, see `mobile/`: a from-scratch React Native (Expo) rewrite, not a web wrapper. Not yet verified on an actual iOS simulator/device (no Mac available in the environment this was built in) — see `mobile/README.md`.
+- **Backend deployment** — not yet actually deployed (needs your hosting account), but fully configured and locally verified: `server/Dockerfile`, `server/fly.toml`, and the exact `prisma migrate deploy` → boot sequence. See `DEPLOY.md`.
+- **App Store submission** — needs your Apple Developer account, the EAS build/submit run, and on-device testing. See `mobile/README.md`'s submission walkthrough.
+- **Privacy Policy** — a real policy describing this app's actual data practices is written at `docs/privacy.html`, ready to host via GitHub Pages. It still needs your contact/legal details filled in and a lawyer's review before real users sign up — no Terms of Service or business entity yet either.
 - **Paid ID/photo verification** (Veriff/Persona/Onfido) — the `verified` badge is just a database flag today; there's no real liveness or ID check behind it.
 - **Payments** — the "Jodi Gold" upsell is inert by design (it tells you payments aren't wired up rather than faking a purchase). Real IAP requires an Apple/Google developer account and billing integration.
 - **Phone number / Apple / Google sign-in** — email + password only. No SMS provider is configured.
-- **Push notifications** — realtime updates work in-app via Socket.IO while the tab is open; there's no mobile/web push for when it's closed.
+- **Push notifications** — realtime updates work in-app via Socket.IO while the app is open; there's no mobile/web push for when it's closed.
 - **Moderation** — reports are recorded (`Report` table) but there's no admin queue or staff tooling to act on them.
-- **Legal** — no Terms of Service, Privacy Policy, or business entity. Needed before real users, not before a demo.
 
 See `../Launch Guide.dc.html` for the fuller picture of what launching for real involves.

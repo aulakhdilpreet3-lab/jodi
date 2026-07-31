@@ -1,8 +1,12 @@
 import crypto from 'node:crypto'
+import fs from 'node:fs'
 import path from 'node:path'
 import multer from 'multer'
 
-const UPLOAD_ROOT = path.join(process.cwd(), 'uploads')
+const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(process.cwd(), 'uploads')
+
+fs.mkdirSync(path.join(UPLOAD_ROOT, 'photos'), { recursive: true })
+fs.mkdirSync(path.join(UPLOAD_ROOT, 'voice'), { recursive: true })
 
 function storageFor(subdir: string) {
   return multer.diskStorage({

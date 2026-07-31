@@ -32,13 +32,19 @@ For the iOS Simulator specifically (which shares your Mac's network), `http://lo
 
 I can build everything up to the point that needs your Apple account, your money, or your judgment call. Here's the actual sequence and who does which part:
 
-### 1. Accounts you need (you, not me)
+### 1. Deploy the backend to a public HTTPS URL
+
+`../server/` needs to be reachable from the internet before you build — see `../DEPLOY.md` for the full walkthrough (Fly.io, with a persistent volume for the SQLite database and uploaded photos/voice clips). Once deployed you'll have a URL like `https://jodi-yourname.fly.dev`.
+
+Put that URL into `mobile/eas.json`'s `build.production.env.EXPO_PUBLIC_API_URL` (already wired up — just replace the placeholder) so the production build talks to your real backend instead of localhost.
+
+### 2. Accounts you need (you, not me)
 - **Apple Developer Program** — $99/year, at [developer.apple.com](https://developer.apple.com). As a company you'll also need a D-U-N-S number, which can take 1–2 weeks — start this early.
 - **Expo account** — free, at [expo.dev](https://expo.dev). This is what lets you build for iOS without owning a Mac (see below).
 
-### 2. Build with EAS (no Mac required)
+### 3. Build with EAS (no Mac required)
 
-[EAS Build](https://docs.expo.dev/build/introduction/) compiles the iOS binary in Expo's cloud. You still need the Apple Developer account from step 1, but not a physical Mac.
+[EAS Build](https://docs.expo.dev/build/introduction/) compiles the iOS binary in Expo's cloud. You still need the Apple Developer account from step 2, but not a physical Mac.
 
 ```sh
 npm install -g eas-cli
@@ -49,7 +55,7 @@ eas build --platform ios --profile production
 
 The first run will walk you through generating/uploading iOS credentials (or let EAS manage them for you — recommended unless you already have a specific provisioning setup).
 
-### 3. Submit
+### 4. Submit
 
 ```sh
 eas submit --platform ios --profile production
@@ -57,14 +63,13 @@ eas submit --platform ios --profile production
 
 This uploads the build to App Store Connect. From there you fill in the store listing and submit for review — that part's in App Store Connect's web UI, not the CLI.
 
-### 4. What you'll need ready for the listing (not built here)
+### 5. What you'll need ready for the listing
 
 - **App icon**: `assets/icon.png` is already a real 1024×1024 icon (the jodi mark), not a placeholder — usable as-is or swap it.
 - **Screenshots** for 6.7" and 6.5" iPhone sizes. Take these from a real run of the app (simulator screenshots work) once you've verified it looks right on-device.
-- **Privacy Policy URL** — Apple requires a real, hosted page. Not written here; see the root `README.md`'s "what's still missing" list.
+- **Privacy Policy URL** — a real policy is written at `../docs/privacy.html`, accurate to what this app actually collects and does with data. It still needs your contact email and legal entity/governing-law details filled in (marked with `[ ]` placeholders at the top of the page), and a lawyer's review before real users sign up. To host it: enable GitHub Pages on this repo (Settings → Pages → deploy from the `main` branch, `/docs` folder) and use `https://<your-github-username>.github.io/<repo>/privacy.html` as the Privacy Policy URL in App Store Connect.
 - **Support URL**, app description, keywords, age rating (17+ or 18+, set honestly for a dating app).
-- **A populated demo account** for the reviewer — Apple rejects empty-looking dating apps (guideline 2.1). Sign up a demo account ahead of time, seed it with a couple of profile prompts, and note the login in your review notes. The server's seed script (`npm run seed --prefix ../server`) already gives you 10 populated demo accounts you can hand to a reviewer directly (`aisha@demo.jodi` … `sana@demo.jodi`, password `password123`) — swap these out before a real public launch, they're for review/testing only.
-- **In-app account deletion** — Apple guideline 5.1.1 requires this for any app with account creation. Not implemented yet; needs a `DELETE /api/auth/me`-style endpoint plus a confirm-and-delete screen before you submit.
+- **A populated demo account** for the reviewer — Apple rejects empty-looking dating apps (guideline 2.1). Sign up a demo account ahead of time, seed it with a couple of profile prompts, and note the login in your review notes. The server's seed script (`npm run seed --prefix ../server`, or `fly ssh console -C "npm run seed"` against the deployed instance) already gives you 10 populated demo accounts you can hand to a reviewer directly (`aisha@demo.jodi` … `sana@demo.jodi`, password `password123`) — swap these out before a real public launch, they're for review/testing only.
 
 ### The Apple review guidelines most likely to bite a dating app
 
@@ -72,11 +77,11 @@ This uploads the build to App Store Connect. From there you fill in the store li
 |---|---|
 | 1.2 (UGC) | You need report/block (✅ built) and a way for Apple to see it working with the demo account. |
 | 3.1.1 (IAP) | "Jodi Gold" is currently a non-functional placeholder — if you want to sell it for real, it **must** go through Apple's in-app purchase, not Stripe or another processor. |
-| 5.1.1 (privacy) | Real privacy policy, accurate data-use labels, and in-app account deletion (see above). |
+| 5.1.1 (privacy) | Privacy policy (✅ written, needs your contact details + a lawyer's review), accurate data-use labels in App Store Connect, and in-app account deletion (✅ built — Me → delete my account, on both web and mobile). |
 | 2.1 (completeness) | Ship the review team a demo account with real content already in it, not an empty new signup. |
 
 ## What's genuinely done vs. what needs you
 
-**Done and working (same backend, same guarantees as the web client):** auth, matching with compatibility scoring, realtime chat with typing indicators, photo upload, in-app voice recording, report/block enforced server-side.
+**Done and working (same backend, same guarantees as the web client):** auth, matching with compatibility scoring, realtime chat with typing indicators, photo upload, in-app voice recording, report/block enforced server-side, in-app account deletion, a deployable backend (Docker + Fly.io config, verified locally), and a drafted privacy policy.
 
-**Needs you, specifically:** the Apple Developer enrollment, the actual `eas build`/`eas submit` run (needs your Apple credentials), on-device verification (I couldn't run this on a simulator or phone), account-deletion flow, privacy policy, and the store listing content.
+**Needs you, specifically:** actually running the deploy (your Fly/hosting account), the Apple Developer enrollment, the actual `eas build`/`eas submit` run (needs your Apple credentials), on-device verification (I couldn't run this on a simulator or phone — no Mac available here), filling in your contact/legal details on the privacy policy and getting it reviewed by a lawyer, and the store listing content (screenshots, description, keywords).
