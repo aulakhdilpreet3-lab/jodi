@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "jodi",
+    "slug": "jodi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "jodi",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#EFE3CC",
+    "primaryColor": "#E5326E",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.jodi.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "jodi uses your microphone to record a short voice intro for your profile.",
+        "NSPhotoLibraryUsageDescription": "jodi needs access to your photos so you can add them to your profile."
+      }
+    },
+    "android": {
+      "package": "com.jodi.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E5326E",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#EFE3CC",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "jodi needs access to your photos so you can add them to your profile."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "jodi uses your microphone to record a short voice intro for your profile."
+        }
+      ]
+    ]
+  }
+}
