@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState, type CSSProperties, type ChangeEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from './api'
 import { useAuth } from './AuthContext'
 import { getSocket } from './socket'
 import type {
-  ChatMessage, CompatRow, DeckCandidate, DragState, FlingDir, FlingState, LikeEntry, MatchSummary, MeUser, PublicUser, Tab,
+  ChatMessage, CompatRow, DeckCandidate, LikeEntry, MatchSummary, MeUser, PublicUser, Tab,
 } from './types'
 
-const clamp = (v: number) => Math.max(0, Math.min(1, v))
-
+type SwipeAction = 'LIKE' | 'PASS' | 'ROSE'
 type ChatPartner = Pick<PublicUser, 'id' | 'name' | 'mono' | 'grad' | 'verified'> & { online?: boolean }
 interface ChatWith { matchId: string; user: ChatPartner }
 
@@ -21,15 +20,9 @@ export function useJodiApp() {
   const [deck, setDeck] = useState<DeckCandidate[]>([])
   const [deckLoading, setDeckLoading] = useState(true)
   const [deckIndex, setDeckIndex] = useState(0)
-  const [drag, setDrag] = useState<DragState>({ x: 0, y: 0, active: false })
-  const [fling, setFling] = useState<FlingState | null>(null)
   const [matchProfile, setMatchProfile] = useState<PublicUser | null>(null)
   const [detail, setDetail] = useState<DeckCandidate | null>(null)
-
-  const dragStart = useRef({ x: 0, y: 0 })
-  const moved = useRef(false)
-  const advanceTimer = useRef<ReturnType<typeof setTimeout>>()
-  const matchTimer = useRef<ReturnType<typeof setTimeout>>()
+  const matchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const loadDeck = async () => {
     setDeckLoading(true)
@@ -82,8 +75,8 @@ export function useJodiApp() {
   const [chatMsgs, setChatMsgs] = useState<ChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [theirTyping, setTheirTyping] = useState(false)
-  const typingStopTimer = useRef<ReturnType<typeof setTimeout>>()
-  const myTypingStopTimer = useRef<ReturnType<typeof setTimeout>>()
+  const typingStopTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const myTypingStopTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     const socket = getSocket()
@@ -107,9 +100,6 @@ export function useJodiApp() {
         return current
       })
     }
-    // Fires when someone ELSE's swipe completes a mutual match with us — the
-    // swiper already gets their match modal from the swipe response; this is
-    // what tells the person who liked first that it just became a match.
     const onMatch = (payload: { matchId: string; user: PublicUser }) => {
       setMatchProfile(payload.user)
     }
@@ -133,14 +123,13 @@ export function useJodiApp() {
 
   const backToMatches = () => setTab(prevTab || 'matches')
 
-  const onDraft = (e: ChangeEvent<HTMLInputElement>) => {
-    setDraft(e.target.value)
+  const onDraft = (text: string) => {
+    setDraft(text)
     if (!chatWith) return
     getSocket()?.emit('typing', { matchId: chatWith.matchId, isTyping: true })
     clearTimeout(myTypingStopTimer.current)
     myTypingStopTimer.current = setTimeout(() => getSocket()?.emit('typing', { matchId: chatWith.matchId, isTyping: false }), 1500)
   }
-  const onDraftKey = (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') void sendMsg() }
   const sendMsg = async () => {
     const text = draft.trim()
     if (!text || !chatWith) return
@@ -167,31 +156,9 @@ export function useJodiApp() {
     setDetail(stub)
   }
 
-  // --- deck drag / fling ---
-  const onCardDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* noop */ }
-    dragStart.current = { x: e.clientX, y: e.clientY }
-    moved.current = false
-    setDrag({ x: 0, y: 0, active: true })
-  }
-  const onCardMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    setDrag(prev => {
-      if (!prev.active) return prev
-      const dx = e.clientX - dragStart.current.x
-      const dy = e.clientY - dragStart.current.y
-      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) moved.current = true
-      return { x: dx, y: dy, active: true }
-    })
-  }
-  const onCardUp = () => {
-    const dx = drag.x
-    if (dx > 95) { void doLike(); return }
-    if (dx < -95) { void doPass(); return }
-    setDrag({ x: 0, y: 0, active: false })
-    if (!moved.current) openDetail()
-  }
-
-  const swipe = async (target: DeckCandidate, action: 'LIKE' | 'PASS' | 'ROSE') => {
+  // --- swipe commits (visual fling animation lives in DiscoverScreen; this
+  // just advances state and fires the API call once that animation ends) ---
+  const swipe = async (target: DeckCandidate, action: SwipeAction) => {
     try {
       const res = await api.post<{ matched: boolean; matchedUser?: PublicUser }>('/api/deck/swipe', { toUserId: target.id, action })
       if (res.matched && res.matchedUser) {
@@ -202,37 +169,28 @@ export function useJodiApp() {
       // best-effort — the card has already advanced locally
     }
   }
-
-  const advance = (dir: FlingDir, action: 'LIKE' | 'PASS' | 'ROSE') => {
+  const commit = (action: SwipeAction) => {
     const target = deck[deckIndex]
-    setFling({ dir })
-    setDrag({ x: 0, y: 0, active: false })
-    clearTimeout(advanceTimer.current)
-    advanceTimer.current = setTimeout(() => {
-      setFling(null)
-      setDeckIndex(i => i + 1)
-      setDrag({ x: 0, y: 0, active: false })
-      if (target) void swipe(target, action)
-    }, 340)
+    setDeckIndex(i => i + 1)
+    if (target) void swipe(target, action)
   }
-  const doLike = async () => advance('like', 'LIKE')
-  const doPass = async () => advance('pass', 'PASS')
-  const sendRose = async () => advance('rose', 'ROSE')
+  const likeCurrent = () => commit('LIKE')
+  const passCurrent = () => commit('PASS')
+  const roseCurrent = () => commit('ROSE')
+
   const resetDeck = async () => { await api.post('/api/deck/reset'); await loadDeck() }
   const undoCard = () => {
     const prevIdx = Math.max(0, deckIndex - 1)
     const target = deck[prevIdx]
     setDeckIndex(prevIdx)
-    setFling(null)
-    setDrag({ x: 0, y: 0, active: false })
     if (target) void api.del(`/api/deck/swipe/${target.id}`).catch(() => {})
   }
 
   const openDetail = () => setDetail(deck[deckIndex] ?? null)
   const closeDetail = () => setDetail(null)
-  const detailLike = () => { setDetail(null); setTimeout(() => void doLike(), 60) }
-  const detailPass = () => { setDetail(null); setTimeout(() => void doPass(), 60) }
-  const detailRose = () => { setDetail(null); setTimeout(() => void sendRose(), 60) }
+  const detailLike = () => { setDetail(null); setTimeout(likeCurrent, 60) }
+  const detailPass = () => { setDetail(null); setTimeout(passCurrent, 60) }
+  const detailRose = () => { setDetail(null); setTimeout(roseCurrent, 60) }
 
   const reportProfile = async (targetId: string, reason: string) => {
     await api.post('/api/report', { targetId, reason })
@@ -248,9 +206,6 @@ export function useJodiApp() {
     if (!matchProfile) return
     const mp = matchProfile
     setMatchProfile(null)
-    // The other side may have already sent a message before we got here, in
-    // which case this match has already moved from newMatches into chats —
-    // so it has to be searched for in both.
     const { newMatches: freshNew, chats: freshChats } = await api.get<{ newMatches: MatchSummary[]; chats: MatchSummary[] }>('/api/matches')
     setNewMatches(freshNew)
     setChats(freshChats)
@@ -273,9 +228,14 @@ export function useJodiApp() {
     const { user } = await api.put<{ user: MeUser }>('/api/profile/prompts', { prompts })
     setUser(user)
   }
-  const uploadPhoto = async (file: File) => {
+  const uploadPhoto = async (uri: string) => {
     const form = new FormData()
-    form.append('photo', file)
+    const filename = uri.split('/').pop() || 'photo.jpg'
+    const ext = filename.split('.').pop()?.toLowerCase()
+    const type = ext === 'png' ? 'image/png' : 'image/jpeg'
+    // React Native's fetch/FormData understands this {uri,name,type} shape
+    // for multipart uploads in place of a browser File/Blob.
+    form.append('photo', { uri, name: filename, type } as unknown as Blob)
     const { user } = await api.upload<{ user: MeUser }>('/api/profile/photo', form)
     setUser(user)
   }
@@ -283,9 +243,9 @@ export function useJodiApp() {
     const { user } = await api.del<{ user: MeUser }>(`/api/profile/photo/${photoId}`)
     setUser(user)
   }
-  const uploadVoice = async (blob: Blob, durationSec: number) => {
+  const uploadVoice = async (uri: string, durationSec: number) => {
     const form = new FormData()
-    form.append('voice', blob, 'voice-intro.webm')
+    form.append('voice', { uri, name: 'voice-intro.m4a', type: 'audio/m4a' } as unknown as Blob)
     form.append('durationSec', String(durationSec))
     const { user } = await api.upload<{ user: MeUser }>('/api/profile/voice', form)
     setUser(user)
@@ -307,29 +267,13 @@ export function useJodiApp() {
   const profile = deck[deckIndex]
   const nextProfile = deck[deckIndex + 1]
 
-  let tx: number, ty: number, rot: number, trans: string
-  if (fling) {
-    tx = fling.dir === 'pass' ? -600 : fling.dir === 'rose' ? 0 : 600
-    ty = fling.dir === 'rose' ? -700 : -40
-    rot = fling.dir === 'pass' ? -22 : fling.dir === 'rose' ? 0 : 22
-    trans = 'transform .34s ease'
-  } else {
-    tx = drag.x; ty = drag.y; rot = drag.x / 18
-    trans = drag.active ? 'none' : 'transform .3s cubic-bezier(.2,.8,.2,1)'
-  }
-  const topCardWrapStyle: CSSProperties = {
-    position: 'absolute', inset: 0, touchAction: 'none', cursor: 'grab',
-    transform: `translate(${tx}px,${ty}px) rotate(${rot}deg)`,
-    transition: trans,
-  }
-
   const dotCols = ['#E5326E', '#F5A524', '#16A6A0', '#7B3FA0', '#3B4CC0']
   const progressDots = deck.map((_, i) => ({
     color: i < deckIndex ? dotCols[i % dotCols.length] : i === deckIndex ? '#F5A524' : '#EFE3CC',
     core: i <= deckIndex ? 'rgba(32,24,18,.55)' : 'rgba(32,24,18,.2)',
   }))
 
-  const likesYou = likes.map((l, i) => ({ ...l, blur: i === 0 ? 'blur(0px)' : 'blur(13px)' }))
+  const likesYou = likes.map((l, i) => ({ ...l, blurred: i !== 0 }))
 
   const fmtTime = (iso: string) => {
     const d = new Date(iso)
@@ -346,58 +290,47 @@ export function useJodiApp() {
     unread: c.unreadCount > 0,
     snippet: c.lastMessage ? (c.lastMessage.mine ? `you: ${c.lastMessage.text}` : c.lastMessage.text) : '',
     snipColor: c.unreadCount > 0 ? '#201812' : '#A69A85',
-    snipWeight: c.unreadCount > 0 ? 600 : 400,
+    snipWeight: c.unreadCount > 0 ? ('600' as const) : ('400' as const),
   }))
   const unreadCount = chats.reduce((n, c) => n + c.unreadCount, 0)
 
   const det = detail
   const detailIsDeckCard = !!(det && profile && det.id === profile.id)
-  const detailPrompts = (det?.prompts ?? []).map(p => ({ q: p.question, a: p.answer, like: detailLike }))
+  const detailPrompts = (det?.prompts ?? []).map(p => ({ q: p.question, a: p.answer }))
   const detailCompat: (CompatRow & { width: string; color: string })[] = (det?.compat ?? []).map(c => ({
     ...c, width: `${c.score}%`, color: c.score < 65 ? '#F5A524' : '#E5326E',
   }))
 
-  const navC = (t: Tab) => (tab === t ? '#E5326E' : '#A69A85')
-  const navF = (t: Tab) => (tab === t ? '#E5326E' : 'none')
-  const navW = (t: Tab) => (tab === t ? 800 : 600)
-  const navB = (t: Tab) => (tab === t ? 'rgba(229,50,110,.12)' : 'transparent')
+  const navActive = (t: Tab) => tab === t
 
   return {
     me: me as MeUser,
     isDiscover: tab === 'discover', isLikes: tab === 'likes', isMatches: tab === 'matches',
     isChat: tab === 'chat', isYou: tab === 'you', showNav: tab !== 'chat',
 
-    profile, nextProfile, hasDeck, deckEnded: !deckLoading && !hasDeck, deckLoading,
-    topCardWrapStyle,
-    likeOpacity: fling ? (fling.dir !== 'pass' ? 1 : 0) : clamp(drag.x / 80),
-    passOpacity: fling ? (fling.dir === 'pass' ? 1 : 0) : clamp(-drag.x / 80),
-    onCardDown, onCardMove, onCardUp,
-    flingLike: () => void doLike(), flingPass: () => void doPass(), sendRose: () => void sendRose(), resetDeck: () => void resetDeck(),
+    deck, profile, nextProfile, deckIndex, hasDeck, deckEnded: !deckLoading && !hasDeck, deckLoading,
+    likeCurrent, passCurrent, roseCurrent,
     undoCard, undoOpacity: deckIndex > 0 ? 1 : 0.35,
     progressDots, remainingLabel: hasDeck ? `${total - deckIndex} left` : 'all seen',
+    resetDeck, openDetail,
 
-    likesYou, likesCount: likes.length, likesLoading, likeBack: (id: string) => void likeBack(id),
+    likesYou, likesCount: likes.length, likesLoading, likeBack,
 
-    newMatches, chats: chatsView, openChat: (matchId: string, user: ChatPartner) => void openChat(matchId, user), matchesLoading,
+    newMatches, chats: chatsView, openChat, matchesLoading,
 
     chatWith, chatMsgs, showTyping: theirTyping,
-    draft, onDraft, onDraftKey, sendMsg: () => void sendMsg(),
-    sendBg: draft.trim() ? '#E5326E' : '#cdbfa6',
+    draft, onDraft, sendMsg,
     backToMatches, openChatProfile,
 
     goDiscover, goLikes, goMatches, goYou,
-    navDiscover: navC('discover'), navDiscoverFill: navF('discover'), navDiscoverW: navW('discover'), navDiscoverBg: navB('discover'),
-    navLikes: navC('likes'), navLikesFill: navF('likes'), navLikesW: navW('likes'), navLikesBg: navB('likes'),
-    navMatches: navC('matches'), navMatchesFill: navF('matches'), navMatchesW: navW('matches'), navMatchesBg: navB('matches'),
-    navYou: navC('you'), navYouFill: navF('you'), navYouW: navW('you'), navYouBg: navB('you'),
+    navDiscover: navActive('discover'), navLikes: navActive('likes'), navMatches: navActive('matches'), navYou: navActive('you'),
     hasUnread: unreadCount > 0, unreadCount,
 
     showMatch: !!matchProfile, matchProfile, closeMatch, messageMatch: () => void messageMatch(),
 
     showDetail: !!detail, detail: det, detailIsDeckCard, detailPrompts, detailCompat,
     closeDetail, detailLike, detailPass, detailRose,
-    reportProfile: (targetId: string, reason: string) => reportProfile(targetId, reason),
-    blockProfile: (targetId: string) => blockProfile(targetId),
+    reportProfile, blockProfile,
 
     updateProfileField, updatePrompts, uploadPhoto, deletePhoto, uploadVoice, deleteVoice,
     logout: authLogout, deleteAccount,

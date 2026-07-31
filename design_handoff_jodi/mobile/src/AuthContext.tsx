@@ -30,18 +30,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const token = getToken()
-    if (!token) { setStatus('anon'); return }
-    api.get<{ user: MeUser }>('/api/auth/me')
-      .then(({ user }) => { setUserState(user); setStatus('authed'); connectSocket() })
-      .catch(() => { setToken(null); setStatus('anon') })
+    let cancelled = false
+    ;(async () => {
+      const token = await getToken()
+      if (!token) { if (!cancelled) setStatus('anon'); return }
+      try {
+        const { user } = await api.get<{ user: MeUser }>('/api/auth/me')
+        if (cancelled) return
+        setUserState(user)
+        setStatus('authed')
+        connectSocket()
+      } catch {
+        if (cancelled) return
+        await setToken(null)
+        setStatus('anon')
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const signup = async (p: SignupPayload) => {
     setError(null)
     try {
       const { token, user } = await api.post<{ token: string; user: MeUser }>('/api/auth/signup', p)
-      setToken(token)
+      await setToken(token)
       setUserState(user)
       setStatus('authed')
       connectSocket()
@@ -55,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null)
     try {
       const { token, user } = await api.post<{ token: string; user: MeUser }>('/api/auth/login', { email, password })
-      setToken(token)
+      await setToken(token)
       setUserState(user)
       setStatus('authed')
       connectSocket()
@@ -66,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
-    setToken(null)
+    void setToken(null)
     setUserState(null)
     setStatus('anon')
     disconnectSocket()

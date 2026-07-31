@@ -1,8 +1,11 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import bcrypt from 'bcryptjs'
 import { Router } from 'express'
 import { type AuthedRequest, ageFromBirthdate, minAge, requireAuth, signToken } from '../auth.js'
 import { prisma } from '../db.js'
 import { meUser } from '../lib/dto.js'
+import { UPLOAD_ROOT } from '../upload.js'
 
 export const authRouter = Router()
 
@@ -48,4 +51,20 @@ authRouter.get('/me', requireAuth, async (req: AuthedRequest, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.userId }, include: { prompts: true, photos: true } })
   if (!user) return res.status(404).json({ error: 'not found' })
   res.json({ user: meUser(user), age: ageFromBirthdate(user.birthdate) })
+})
+
+// Apple guideline 5.1.1(v) requires in-app account deletion for any app
+// that offers account creation. Cascades to prompts/photos/swipes/matches/
+// messages/reports/blocks via the schema's onDelete: Cascade relations.
+authRouter.delete('/me', requireAuth, async (req: AuthedRequest, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.userId }, include: { photos: true } })
+  if (!user) return res.status(404).json({ error: 'not found' })
+
+  await Promise.all([
+    ...user.photos.map(p => fs.rm(path.join(UPLOAD_ROOT, 'photos', path.basename(p.url)), { force: true })),
+    user.voiceUrl ? fs.rm(path.join(UPLOAD_ROOT, 'voice', path.basename(user.voiceUrl)), { force: true }) : Promise.resolve(),
+  ])
+
+  await prisma.user.delete({ where: { id: user.id } })
+  res.json({ ok: true })
 })

@@ -185,6 +185,19 @@ export default function MeScreen({ app }: { app: JodiApp }) {
         ))}
       </div>
 
+      <div style={{ textAlign: 'center', paddingBottom: 10 }}>
+        <span
+          onClick={() => {
+            if (window.confirm('delete your account? this permanently deletes your profile, matches, and messages. this cannot be undone.')) {
+              void app.deleteAccount()
+            }
+          }}
+          style={{ fontSize: 12, color: '#8A7C68', textDecoration: 'underline', cursor: 'pointer' }}
+        >
+          delete my account
+        </span>
+      </div>
+
       {editField && (
         <EditFieldModal
           title={editField.title}
